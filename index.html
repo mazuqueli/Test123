@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPG com IA</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 10px;
+      height: 100vh;
+    }
+    header, footer {
+      grid-column: 1 / -1;
+    }
+    .panel {
+      background: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    #chat {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background: #eaeaea;
+    }
+    .message {
+      max-width: 80%;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .gm {background: #d1e8ff; align-self: flex-start;}
+    .player {background: #c3ffc3; align-self: flex-end;}
+    .input-area {
+      display: flex;
+      gap: 5px;
+    }
+    .abilities img {
+      width: 40px;
+      height: 40px;
+      margin-right: 5px;
+      cursor: pointer;
+    }
+    .inventory-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .inventory-item img {width: 30px; height: 30px; margin-right: 5px;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="panel" id="left">
+    <div id="profile">
+      <img id="profile-img" src="https://via.placeholder.com/80" alt="avatar">
+      <h2 id="character-name">Aventuriero</h2>
+      <p id="character-class">Guerreiro</p>
+      <p id="tagline">"Em frente, sempre"</p>
+    </div>
+    <div id="attributes">
+      <h3>Atributos</h3>
+      <p>Força: <span id="str">10</span></p>
+      <p>Destreza: <span id="dex">8</span></p>
+      <p>Vida: <progress id="hp" value="80" max="100"></progress></p>
+      <p>Mana: <progress id="mp" value="50" max="100"></progress></p>
+    </div>
+    <div id="skills">
+      <h3>Habilidades</h3>
+      <div class="abilities">
+        <img src="https://via.placeholder.com/40" title="Golpe Poderoso\nCusto: 10 MP" onclick="useSkill('Golpe Poderoso')">
+        <img src="https://via.placeholder.com/40" title="Defesa Rápida\nCusto: 5 MP" onclick="useSkill('Defesa Rápida')">
+      </div>
+    </div>
+  </div>
+  <div class="panel" id="center">
+    <div id="chat">
+      <button id="startBtn" onclick="startGame()">Iniciar Aventura</button>
+    </div>
+    <div class="input-area" id="inputArea" style="display:none;">
+      <input type="text" id="userInput" placeholder="Digite sua ação..." style="flex:1;">
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
+  </div>
+  <div class="panel" id="right">
+    <h3>Inventário</h3>
+    <div id="inventory">
+      <div class="inventory-item"><img src="https://via.placeholder.com/30"><span>Poção de Vida x2</span></div>
+    </div>
+  </div>
+</div>
+<script>
+let chatHistory = [];
+
+function appendMessage(author, text) {
+  const msg = document.createElement('div');
+  msg.className = 'message ' + (author === 'M' ? 'gm' : 'player');
+  msg.textContent = (author === 'M' ? 'M: ' : 'J: ') + text;
+  document.getElementById('chat').appendChild(msg);
+  document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+}
+
+function startGame() {
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('inputArea').style.display = 'flex';
+  appendMessage('M', 'Bem-vindo ao RPG! Qual tom e dificuldade deseja?');
+  chatHistory.push({role:'model', content:'Bem-vindo ao RPG! Qual tom e dificuldade deseja?'});
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendMessage('J', text);
+  chatHistory.push({role:'user', content:text});
+  requestAI();
+}
+
+function useSkill(name) {
+  appendMessage('J', `*Usa a habilidade ${name}*`);
+  chatHistory.push({role:'user', content:`*Usa a habilidade ${name}*`});
+  requestAI();
+}
+
+async function requestAI() {
+  const data = {
+    model: 'gemini-pro',
+    messages: chatHistory,
+    stream: false
+  };
+  try {
+    const resp = await fetch('https://api.gemini.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer SUA_CHAVE_AQUI'
+      },
+      body: JSON.stringify(data)
+    });
+    const json = await resp.json();
+    const aiMessage = json.choices[0].message.content;
+    appendMessage('M', aiMessage);
+    chatHistory.push({role:'model', content:aiMessage});
+  } catch(e) {
+    appendMessage('M', 'Erro ao conectar à IA.');
+  }
+}
+</script>
+</body>
+</html>
